@@ -1,0 +1,8 @@
+entelect-visualiser_Data/
+Matches/
+MonoBleedingEdge/
+target/
+start-visualiser.bat
+UnityPlayer.dll
+*.jar
+*.exe
