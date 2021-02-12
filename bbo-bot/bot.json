@@ -3,6 +3,6 @@
   "email": "13519134@std.stei.itb.ac.id",
   "nickName": "Boonga",
   "botLocation": "/target",
-  "botFileName": "java-sample-bot-jar-with-dependencies.jar",
+  "botFileName": "bbo-bot-jar-with-dependencies.jar",
   "botLanguage": "java"
 }
