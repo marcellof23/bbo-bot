@@ -7,6 +7,7 @@ import za.co.entelect.challenge.enums.Direction;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.io.*;
 
 public class Bot {
 
@@ -30,12 +31,15 @@ public class Bot {
     }
 
     public Command run() {
-
         Worm enemyWorm = getFirstWormInRange();
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
+
+        // System.out.println(String.format("Anda sedang memakai worm ke %d", this.currentWorm.id));
+        // System.out.println(String.format("Senjata \nDMG: %d\nRANGE : %d", this.currentWorm.weapon.damage, this.currentWorm.weapon.range));
+        // System.out.println(String.format("Role : %s", this.currentWorm.profession));
 
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
