@@ -2,6 +2,7 @@ package za.co.entelect.challenge;
 
 import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
+import za.co.entelect.challenge.enums.AttackType;
 import za.co.entelect.challenge.enums.CellType;
 import za.co.entelect.challenge.enums.Direction;
 
@@ -30,16 +31,70 @@ public class Bot {
                 .get();
     }
 
-    public Command run() {
-        Worm enemyWorm = getFirstWormInRange();
+    // TODO: should use snowball?
+    private boolean shouldSnowball(Worm enemy) {
+        return true;
+    }
+
+    // TODO: should use snowball?
+    private boolean shouldSnowball(int x, int y) {
+        return true;
+    }
+
+    // Print current worm information for debugging
+    private void printCurrentWormInformation() {
+        System.out.println(String.format("Current worm id: %d", this.currentWorm.id));
+        System.out.println(String.format("Position:\n\t- X: %d\n\t- Y: %d", this.currentWorm.position.x, this.currentWorm.position.y));
+        System.out.println(String.format("Role : %s", this.currentWorm.profession));
+        System.out.println(String.format("Basic weapon:\n\t- DMG: %d\n\t- RANGE: %d", this.currentWorm.weapon.damage, this.currentWorm.weapon.range));
+
+        if (this.currentWorm.profession.equals("Agent")) {
+            System.out.println(String.format("Banana Bomb:\n\t- DMG: %d\n\t- DMG RADIUS: %d\n\t- RANGE: %d\n\t- REMAINING COUNT: %d",
+                    this.currentWorm.bananaBombs.damage,
+                    this.currentWorm.bananaBombs.damageRadius,
+                    this.currentWorm.bananaBombs.range,
+                    this.currentWorm.bananaBombs.count
+            ));
+        }
+
+        if (this.currentWorm.profession.equals("Technologist")) {
+            System.out.println(String.format("Snowball:\n\t- FREEZE DURATION: %ds\n\t- FREEZE RADIUS: %d\n\t- RANGE: %d\n\t- REMAINING COUNT: %d",
+                    this.currentWorm.snowballs.freezeDuration,
+                    this.currentWorm.snowballs.freezeRadius,
+                    this.currentWorm.snowballs.range,
+                    this.currentWorm.snowballs.count
+            ));
+        }
+    }
+
+    // Main for bot
+    // @param boolean DEBUG
+    // @return Command
+    public Command run(boolean DEBUG) {
+        if (DEBUG) {
+            printCurrentWormInformation();
+        }
+
+        String profession = currentWorm.profession;
+
+        Worm enemyWorm;
+
+        // TODO: change to shouldBananaBombs and shouldSnowball
+        if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
+            enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
+            if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
+        } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
+            enemyWorm = getAttackableWormInRange(AttackType.SNOWBALL);
+            if (enemyWorm != null) return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
+        }
+
+        // check shooting
+        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
-
-        // System.out.println(String.format("Anda sedang memakai worm ke %d", this.currentWorm.id));
-        // System.out.println(String.format("Senjata \nDMG: %d\nRANGE : %d", this.currentWorm.weapon.damage, this.currentWorm.weapon.range));
-        // System.out.println(String.format("Role : %s", this.currentWorm.profession));
 
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
@@ -54,25 +109,61 @@ public class Bot {
         return new DoNothingCommand();
     }
 
-    private Worm getFirstWormInRange() {
+    // Get the attackable worm in range based on priority
+    // Technologist -> Agent -> Commando
+    // @param AttackType type
+    // @return Worm
+    private Worm getAttackableWormInRange(AttackType type) {
+        int range = 0;
 
-        Set<String> cells = constructFireDirectionLines(currentWorm.weapon.range)
+        if (type == AttackType.SHOOTING) {
+            range = currentWorm.weapon.range;
+        } else if (type == AttackType.BANANA_BOMB) {
+            range = currentWorm.bananaBombs.range;
+        } else if (type == AttackType.SNOWBALL) {
+            range = currentWorm.snowballs.range;
+        }
+
+        Set<String> cells = getAllAttackableCellsInRange(range, type)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(cell -> String.format("%d_%d", cell.x, cell.y))
                 .collect(Collectors.toSet());
 
+        PriorityQueue<Worm> attackableWorms = new PriorityQueue<Worm>();
+
+        // search for all attackable worms
         for (Worm enemyWorm : opponent.worms) {
             String enemyPosition = String.format("%d_%d", enemyWorm.position.x, enemyWorm.position.y);
             if (cells.contains(enemyPosition)) {
-                return enemyWorm;
+                // enemy is attackable, add to priority queue, priority is sorted by profession in compareTo functions
+                attackableWorms.add(enemyWorm);
             }
         }
 
-        return null;
+        // no worm can be attacked!
+        if(attackableWorms.size() == 0) {
+            return null;
+        }
+
+        // get the head in priority queue
+        Worm result = attackableWorms.poll();
+        // Check if the enemy still has health remaining
+        while(result.health <= 0 && !attackableWorms.isEmpty()) {
+            result = attackableWorms.poll();
+        }
+
+        // no worm can be attacked!
+        if (result.health <= 0) return null;
+
+        return result;
     }
 
-    private List<List<Cell>> constructFireDirectionLines(int range) {
+    // Get all attackable cells that in attack range of current worm (maybe empty cells, there is no worm there)
+    // @param int range
+    // @param AttackType type, attack type (SHOOTING, BANANA_BOMB, SNOWBALL)
+    // @return List<List<Cell>>, all attackable cells
+    private List<List<Cell>> getAllAttackableCellsInRange(int range, AttackType type) {
         List<List<Cell>> directionLines = new ArrayList<>();
         for (Direction direction : Direction.values()) {
             List<Cell> directionLine = new ArrayList<>();
@@ -90,7 +181,19 @@ public class Bot {
                 }
 
                 Cell cell = gameState.map[coordinateY][coordinateX];
+
+                // if not AIR cells, cannot be attacked (there will be no worms there)
                 if (cell.type != CellType.AIR) {
+                    break;
+                }
+
+                // player wants to shoot but blocked by deep space or dirt cells
+                if (type == AttackType.SHOOTING && isAttackBlocked(cell, false, false)) {
+                    break;
+                }
+
+                // player wants to banana bomb or snowball but blocked by deep space cells
+                if (type != AttackType.SHOOTING && isAttackBlocked(cell, true, false)) {
                     break;
                 }
 
@@ -100,6 +203,34 @@ public class Bot {
         }
 
         return directionLines;
+    }
+
+    // is attacking will be blocked by dirt cells or deep space?
+    // @param Cell, target cell
+    // @param boolean, is the attack passed dirt cells?
+    // @param boolean, is the attack passed deep space cells?
+    // @return boolean
+    private boolean isAttackBlocked(Cell c, boolean dirtPassed, boolean deepSpacePassed) {
+        int player_x = currentWorm.position.x;
+        int player_y = currentWorm.position.y;
+
+        Position playerPosition = new Position(player_x, player_y);
+        Position currentCell = new Position(c.x, c.y);
+
+        Direction d = resolveDirection(playerPosition, currentCell);
+
+        while(!playerPosition.equals(currentCell)) {
+            currentCell = currentCell.minus(d);
+            if ((!dirtPassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DIRT) ||
+                (!deepSpacePassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DEEP_SPACE)
+            ) {
+                // shooting will be blocked
+                return true;
+            }
+        }
+
+        // shooting will not be blocked
+        return false;
     }
 
     private List<Cell> getSurroundingCells(int x, int y) {
@@ -125,6 +256,10 @@ public class Bot {
                 && y >= 0 && y < gameState.mapSize;
     }
 
+    // Direction of position b to position a
+    // @param Position a
+    // @param Position b
+    // @return Direction
     private Direction resolveDirection(Position a, Position b) {
         StringBuilder builder = new StringBuilder();
 
