@@ -23,6 +23,10 @@ public class Bot {
         this.currentWorm = getCurrentWorm(gameState);
     }
 
+    private void print(String msg){
+        System.out.println(msg);
+    }
+
     private MyWorm getCurrentWorm(GameState gameState) {
         return Arrays.stream(gameState.myPlayer.worms)
                 .filter(myWorm -> myWorm.id == gameState.currentWormId)
@@ -31,15 +35,38 @@ public class Bot {
     }
 
     public Command run() {
+        String profession = this.currentWorm.profession;
+        Position position = this.currentWorm.position;
+        int health = this.currentWorm.health;
+        int roundsUntilUnfrozen = this.currentWorm.roundsUntilUnfrozen;
+
+        print(String.format("Anda sedang menggunakan worm dengan profesi : %s", profession));
+        //cek worm terdekat
         Worm enemyWorm = getFirstWormInRange();
-        if (enemyWorm != null) {
-            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-            return new ShootCommand(direction);
+        if(roundsUntilUnfrozen!=0){
+            print("Anda masih beku");
         }
 
-        // System.out.println(String.format("Anda sedang memakai worm ke %d", this.currentWorm.id));
-        // System.out.println(String.format("Senjata \nDMG: %d\nRANGE : %d", this.currentWorm.weapon.damage, this.currentWorm.weapon.range));
-        // System.out.println(String.format("Role : %s", this.currentWorm.profession));
+        if (profession.equals("Technologist") || profession.equals("Agent")) {
+            //cek apakah bisa nembak langsung
+            if (enemyWorm != null) {
+                //snowball dan bananabomb
+                print("Anda harusnya ngebomb");
+                if(profession.equals("Agent")){
+                    int banana = gameState.myPlayer.worms[1].bananaBombs.count;
+                    if(banana>0){
+                        return new BananaCommand(enemyWorm.position.x, enemyWorm.position.y);
+                    }
+                }else{
+                    //disini snowball
+                }
+            }
+        }else{
+            if (enemyWorm != null) {
+                Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                return new ShootCommand(direction);
+            }
+        }
 
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
