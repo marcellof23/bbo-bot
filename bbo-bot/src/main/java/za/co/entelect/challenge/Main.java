@@ -47,7 +47,7 @@ public class Main {
                     System.out.println(target2);
                     TimeUnit.SECONDS.sleep(3);
                 }
-                Command command = new Bot(random, gameState).run();
+                Command command = new Bot(random, gameState).run(DEBUG);
 
                 System.out.println(String.format("C;%d;%s", roundNumber, command.render()));
             } catch (Exception e) {
