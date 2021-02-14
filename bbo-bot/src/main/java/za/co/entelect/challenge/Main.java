@@ -35,7 +35,6 @@ public class Main {
                 String state = new String(Files.readAllBytes(Paths.get(statePath)));
 
                 GameState gameState = gson.fromJson(state, GameState.class);
-                
                 if(DEBUG){
                     String target1 = gson.toJson(gameState.myPlayer);
                     String target2 = gson.toJson(gameState.opponents);
