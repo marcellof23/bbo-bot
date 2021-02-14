@@ -34,14 +34,28 @@ public class Bot {
                 .get();
     }
 
-    // TODO: should use snowball?
-    private boolean shouldSnowball(Worm enemy) {
-        return true;
-    }
+    // should use snowball?
+    // @return Worm, enemy worm is returned if the player should use snowball to the choosen worm
+    private Worm shouldSnowball() {
+        PriorityQueue<Worm> attackableWorms;
 
-    // TODO: should use snowball?
-    private boolean shouldSnowball(int x, int y) {
-        return true;
+        if (currentWorm.profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
+            attackableWorms = getAllAttackableWormInRange(AttackType.SNOWBALL);
+
+            while(!attackableWorms.isEmpty()) {
+                Worm w = attackableWorms.poll();
+                if (w.roundsUntilUnfrozen == 0) {
+                    // there is a unfrozen worm, then use snowball to freeze!
+                    return w;
+                }
+            }
+
+            // all frozen or there is no attackable worms in range
+            return null;
+        }
+
+        // not technologist or no snowballs remaining
+        return null;
     }
 
     // Print current worm information for debugging
@@ -108,7 +122,7 @@ public class Bot {
             enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
             if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            enemyWorm = getAttackableWormInRange(AttackType.SNOWBALL);
+            enemyWorm = shouldSnowball();
             if (enemyWorm != null) return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
         }
 
@@ -152,11 +166,11 @@ public class Bot {
 
     }
 
-    // Get the attackable worm in range based on priority
+    // Get all attackable worms in range based on priority
     // Technologist -> Agent -> Commando
     // @param AttackType type
-    // @return Worm
-    private Worm getAttackableWormInRange(AttackType type) {
+    // @return PriorityQueue<Worm>
+    private PriorityQueue<Worm> getAllAttackableWormInRange(AttackType type) {
         int range = 0;
 
         if (type == AttackType.SHOOTING) {
@@ -184,6 +198,14 @@ public class Bot {
             }
         }
 
+        return attackableWorms;
+    }
+
+    // Get the first attackable worm in range based on priority
+    // Technologist -> Agent -> Commando
+    // @param PriorityQueue<Worm> attackableWorms
+    // @return Worm
+    private Worm getAttackableWormInRange(PriorityQueue<Worm> attackableWorms) {
         // no worm can be attacked!
         if(attackableWorms.size() == 0) {
             return null;
@@ -201,6 +223,16 @@ public class Bot {
 
         return result;
     }
+
+    // Get the first attackable worm in range based on priority
+    // Technologist -> Agent -> Commando
+    // @param AttackType type
+    // @return Worm
+    private Worm getAttackableWormInRange(AttackType type) {
+        PriorityQueue<Worm> attackableWorms = getAllAttackableWormInRange(type);
+        return getAttackableWormInRange(attackableWorms);
+    }
+
 
     // Get all attackable cells that in attack range of current worm (maybe empty cells, there is no worm there)
     // @param int range
