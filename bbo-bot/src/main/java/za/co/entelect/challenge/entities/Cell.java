@@ -15,4 +15,5 @@ public class Cell {
 
     @SerializedName("powerup")
     public PowerUp powerUp;
+
 }

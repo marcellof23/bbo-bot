@@ -17,6 +17,9 @@ public class Bot {
     private Opponent opponent;
     private MyWorm currentWorm;
 
+    private final int[] deltaX = {0, 1, 1, 1, 0, -1, -1, -1};
+    private final int[] deltaY = {-1, -1, 0, 1, 1, 1, 0, -1};
+    private final Position CENTRE = new Position(16,16);
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -70,15 +73,36 @@ public class Bot {
     // Main for bot
     // @param boolean DEBUG
     // @return Command
+
     public Command run(boolean DEBUG) {
         if (DEBUG) {
             printCurrentWormInformation();
         }
-
+        if(gameState.currentRound<=100)
+        {
+            System.out.println("==================asdfasdfasdfasdf===============");
+            List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+            for(int i=0;i<surroundingBlocks.size();i++)
+            {
+                Cell block = surroundingBlocks.get(i);
+                if(block.type == CellType.DIRT)
+                {
+                    return new DigCommand(block.x, block.y);
+                }
+            }
+            for(int i=0;i<surroundingBlocks.size();i++)
+            {
+                Cell blocks = surroundingBlocks.get(i);
+                if(blocks.type == CellType.AIR)
+                {
+                    return new MoveCommand(blocks.x, blocks.y);
+                }
+            }
+        }
         String profession = currentWorm.profession;
 
         Worm enemyWorm;
-
+        System.out.println("==================asdfasdfasdfasdf===============");
         // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
             enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
@@ -90,23 +114,42 @@ public class Bot {
 
         // check shooting
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
-
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
+        else {
+            Direction direction = resolveDirection( currentWorm.position, CENTRE);
+            int dX = currentWorm.position.x + direction.x;
+            int dY = currentWorm.position.y + direction.y;
+            if(isValidCoordinate(dX,dY))
+            {
+                Cell C = gameState.map[dX][dY];
+                if(C.type == CellType.DIRT)
+                {
+                    return new DigCommand(dX, dY);
+                }
+                else if(C.type == CellType.AIR)
+                {
+                    return new MoveCommand(dX, dY);
+                }
+            }
+            return new DoNothingCommand();
 
-        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-        int cellIdx = random.nextInt(surroundingBlocks.size());
-
-        Cell block = surroundingBlocks.get(cellIdx);
-        if (block.type == CellType.AIR) {
-            return new MoveCommand(block.x, block.y);
-        } else if (block.type == CellType.DIRT) {
-            return new DigCommand(block.x, block.y);
+//           if(direction )
+//            return new MoveCommand(direction.x , direction.y);
         }
+//        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+//        int cellIdx = random.nextInt(surroundingBlocks.size());
+//
+//        Cell block = surroundingBlocks.get(cellIdx);
+//        if (block.type == CellType.AIR) {
+//            return new MoveCommand(block.x, block.y);
+//        } else if (block.type == CellType.DIRT) {
+//            return new DigCommand(block.x, block.y);
+//        }
 
-        return new DoNothingCommand();
+
     }
 
     // Get the attackable worm in range based on priority
