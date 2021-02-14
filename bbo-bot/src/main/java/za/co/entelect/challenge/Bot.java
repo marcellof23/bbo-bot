@@ -16,10 +16,9 @@ public class Bot {
     private GameState gameState;
     private Opponent opponent;
     private MyWorm currentWorm;
-
-    private final int[] deltaX = {0, 1, 1, 1, 0, -1, -1, -1};
-    private final int[] deltaY = {-1, -1, 0, 1, 1, 1, 0, -1};
-    private final Position CENTRE = new Position(16,16);
+    private final Position CENTRE1 = new Position(13,16);
+    private final Position CENTRE2 = new Position(16,16);
+    private final Position CENTRE3 = new Position(19,16);
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -128,42 +127,43 @@ public class Bot {
 
         // check shooting
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+//        Position CENTRE = new Position(currentWorm.position.x, currentWorm.position.y);
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
         else {
+            Position CENTRE = new Position(0,0);
+            if(gameState.currentWormId==1) {
+                CENTRE = CENTRE3;
+            }
+            else if(gameState.currentWormId==2) {
+                CENTRE = CENTRE1;
+            }
+            else {
+                CENTRE = CENTRE2;
+            }
             Direction direction = resolveDirection( currentWorm.position, CENTRE);
+            if(direction == null)
+                return new DoNothingCommand();
             int dX = currentWorm.position.x + direction.x;
             int dY = currentWorm.position.y + direction.y;
             if(isValidCoordinate(dX,dY))
             {
-                Cell C = gameState.map[dX][dY];
+                Cell C = gameState.map[dY][dX];
                 if(C.type == CellType.DIRT)
                 {
-                    return new DigCommand(dX, dY);
+                    System.out.println("MASUK TANAH");
+                    return new DigCommand(C.x, C.y);
                 }
-                else if(C.type == CellType.AIR)
+                else
                 {
-                    return new MoveCommand(dX, dY);
+                    System.out.println("MASUK AIR");
+                    return new MoveCommand(C.x, C.y);
                 }
             }
             return new DoNothingCommand();
-
-//           if(direction )
-//            return new MoveCommand(direction.x , direction.y);
         }
-//        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-//        int cellIdx = random.nextInt(surroundingBlocks.size());
-//
-//        Cell block = surroundingBlocks.get(cellIdx);
-//        if (block.type == CellType.AIR) {
-//            return new MoveCommand(block.x, block.y);
-//        } else if (block.type == CellType.DIRT) {
-//            return new DigCommand(block.x, block.y);
-//        }
-
-
     }
 
     // Get all attackable worms in range based on priority
@@ -336,7 +336,7 @@ public class Bot {
     // @param Position b
     // @return Direction
     private Direction resolveDirection(Position a, Position b) {
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder("");
 
         int verticalComponent = b.y - a.y;
         int horizontalComponent = b.x - a.x;
@@ -346,13 +346,21 @@ public class Bot {
         } else if (verticalComponent > 0) {
             builder.append('S');
         }
-
         if (horizontalComponent < 0) {
             builder.append('W');
         } else if (horizontalComponent > 0) {
             builder.append('E');
         }
-
-        return Direction.valueOf(builder.toString());
+        if(builder.toString().equals(""))
+        {
+            return null;
+        }
+        try {
+            return Direction.valueOf(builder.toString());
+        }
+        catch (Exception ex ) {
+            ex.printStackTrace();
+            return null;
+        }
     }
 }
