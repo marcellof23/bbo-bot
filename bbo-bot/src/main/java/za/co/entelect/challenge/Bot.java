@@ -6,6 +6,7 @@ import za.co.entelect.challenge.enums.AttackType;
 import za.co.entelect.challenge.enums.CellType;
 import za.co.entelect.challenge.enums.Direction;
 
+import java.sql.SQLOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.io.*;
@@ -34,23 +35,31 @@ public class Bot {
     }
 
     // should use snowball?
-    // @return Worm, enemy worm is returned if the player should use snowball to the choosen worm
-    private Worm shouldSnowball() {
-        PriorityQueue<Worm> attackableWorms;
-
+    // @return Position, position is returned if the player should use snowball to the choosen position
+    private Position shouldSnowball() {
         if (currentWorm.profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            attackableWorms = getAllAttackableWormInRange(AttackType.SNOWBALL);
+            List<Cell> attackableCells = getAllAttackableCellsInRange(currentWorm.snowballs.range, AttackType.SNOWBALL);
 
-            while(!attackableWorms.isEmpty()) {
-                Worm w = attackableWorms.poll();
-                if (w.roundsUntilUnfrozen == 0) {
-                    // there is a unfrozen worm, then use snowball to freeze!
-                    return w;
+            Position optimalPos = null;
+            int maxEnemyHits = 0;
+
+            for(Cell cell : attackableCells) {
+                int m = 0;
+                for(Worm enemy : opponent.worms) {
+                    if(enemy.roundsUntilUnfrozen == 0 &&
+                       euclideanDistance(cell.x, cell.y, enemy.position.x, enemy.position.y) <= currentWorm.snowballs.freezeRadius) {
+                        m += 1;
+                    }
+                }
+
+                if (m > maxEnemyHits) {
+                    maxEnemyHits = m;
+                    optimalPos = new Position(cell.x, cell.y);
                 }
             }
 
-            // all frozen or there is no attackable worms in range
-            return null;
+            // return optimal position for the most enemy hits, null if not found
+            return optimalPos;
         }
 
         // not technologist or no snowballs remaining
@@ -82,10 +91,68 @@ public class Bot {
             ));
         }
     }
-//    private void MoveToCenter() {
-//
-//    }
+    private Command first100Round(Position CENTRE) {
+        String profession = currentWorm.profession;
+        Worm enemyWorm;
+        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+        // TODO: change to shouldBananaBombs and shouldSnowball
+        if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
+            enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
+            if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
+        } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
+            Position snowballPosition = shouldSnowball();
+            if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
+        }
+        if (enemyWorm != null) {
+            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+            return new ShootCommand(direction);
+        }
 
+        Vector<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, 1);
+
+        for(Cell surround : surroundingBlocks)
+        {
+            if(surround.type == CellType.DIRT) {
+                return new DigCommand(surround.x, surround.y);
+            }
+        }
+        Direction direction = resolveDirection( currentWorm.position, CENTRE);
+        if(direction == null)
+            // Masukkin algoritma flee & attack(ganti DoNothingCommand)
+            return new DoNothingCommand();
+
+        int dX = currentWorm.position.x + direction.x;
+        int dY = currentWorm.position.y + direction.y;
+        Cell C = gameState.map[dY][dX];
+        if(C.type == CellType.DIRT)
+        {
+            return new DigCommand(C.x, C.y);
+        }
+        else {
+            return new MoveCommand(C.x, C.y);
+        }
+    }
+    private Command MovetoCenter(Position CENTRE)
+    {
+        Direction direction = resolveDirection( currentWorm.position, CENTRE);
+        if(direction == null)
+            return new DoNothingCommand();
+        int dX = currentWorm.position.x + direction.x;
+        int dY = currentWorm.position.y + direction.y;
+        if(isValidCoordinate(dX,dY))
+        {
+            Cell C = gameState.map[dY][dX];
+            if(C.type == CellType.DIRT)
+            {
+                return new DigCommand(C.x, C.y);
+            }
+            else
+            {
+                return new MoveCommand(C.x, C.y);
+            }
+        }
+        return new DoNothingCommand();
+    }
     // Main for bot
     // @param boolean DEBUG
     // @return Command
@@ -106,47 +173,19 @@ public class Bot {
         }
         if(gameState.currentRound<=100)
         {
-            System.out.println("==================asdfasdfasdfasdf===============");
-
-            Worm enemyWorm;
-            enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
-            if (enemyWorm != null) {
-                Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-                return new ShootCommand(direction);
-            }
-            List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-            for(Cell surround : surroundingBlocks)
-            {
-                if(surround.type == CellType.DIRT) {
-                    return new DigCommand(surround.x, surround.y);
-                }
-            }
-            Direction direction = resolveDirection( currentWorm.position, CENTRE);
-            if(direction == null)
-                return new DoNothingCommand();
-            int dX = currentWorm.position.x + direction.x;
-            int dY = currentWorm.position.y + direction.y;
-            Cell C = gameState.map[dY][dX];
-            if(C.type == CellType.DIRT)
-            {
-                return new DigCommand(C.x, C.y);
-            }
-            else
-            {
-                return new MoveCommand(C.x, C.y);
-            }
+         return  first100Round(CENTRE);
         }
-        String profession = currentWorm.profession;
 
+        String profession = currentWorm.profession;
         Worm enemyWorm;
-        System.out.println("==================asdfasdfasdfasdf===============");
+
         // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
             enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
             if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            enemyWorm = shouldSnowball();
-            if (enemyWorm != null) return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
+            Position snowballPosition = shouldSnowball();
+            if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
         }
 
         // check shooting
@@ -156,25 +195,7 @@ public class Bot {
             return new ShootCommand(direction);
         }
         else {
-
-            Direction direction = resolveDirection( currentWorm.position, CENTRE);
-            if(direction == null)
-                return new DoNothingCommand();
-            int dX = currentWorm.position.x + direction.x;
-            int dY = currentWorm.position.y + direction.y;
-            if(isValidCoordinate(dX,dY))
-            {
-                Cell C = gameState.map[dY][dX];
-                if(C.type == CellType.DIRT)
-                {
-                    return new DigCommand(C.x, C.y);
-                }
-                else
-                {
-                    return new MoveCommand(C.x, C.y);
-                }
-            }
-            return new DoNothingCommand();
+            return MovetoCenter(CENTRE);
         }
     }
 
@@ -195,7 +216,6 @@ public class Bot {
 
         Set<String> cells = getAllAttackableCellsInRange(range, type)
                 .stream()
-                .flatMap(Collection::stream)
                 .map(cell -> String.format("%d_%d", cell.x, cell.y))
                 .collect(Collectors.toSet());
 
@@ -249,47 +269,55 @@ public class Bot {
     // Get all attackable cells that in attack range of current worm (maybe empty cells, there is no worm there)
     // @param int range
     // @param AttackType type, attack type (SHOOTING, BANANA_BOMB, SNOWBALL)
-    // @return List<List<Cell>>, all attackable cells
-    private List<List<Cell>> getAllAttackableCellsInRange(int range, AttackType type) {
-        List<List<Cell>> directionLines = new ArrayList<>();
-        for (Direction direction : Direction.values()) {
-            List<Cell> directionLine = new ArrayList<>();
-            for (int directionMultiplier = 1; directionMultiplier <= range; directionMultiplier++) {
+    // @return <List<Cell>, all attackable cells
+    private List<Cell> getAllAttackableCellsInRange(int range, AttackType type) {
+        // if shooting use direction lines
+        if (type == AttackType.SHOOTING) {
+            List<List<Cell>> directionLines = new ArrayList<>();
+            for (Direction direction : Direction.values()) {
+                List<Cell> directionLine = new ArrayList<>();
+                for (int directionMultiplier = 1; directionMultiplier <= range; directionMultiplier++) {
 
-                int coordinateX = currentWorm.position.x + (directionMultiplier * direction.x);
-                int coordinateY = currentWorm.position.y + (directionMultiplier * direction.y);
+                    int coordinateX = currentWorm.position.x + (directionMultiplier * direction.x);
+                    int coordinateY = currentWorm.position.y + (directionMultiplier * direction.y);
 
-                if (!isValidCoordinate(coordinateX, coordinateY)) {
-                    break;
+                    if (!isValidCoordinate(coordinateX, coordinateY)) {
+                        break;
+                    }
+
+                    if (euclideanDistance(currentWorm.position.x, currentWorm.position.y, coordinateX, coordinateY) > range) {
+                        break;
+                    }
+
+                    Cell cell = gameState.map[coordinateY][coordinateX];
+
+                    // if not AIR cells, cannot be attacked (there will be no worms there)
+                    if (cell.type != CellType.AIR) {
+                        break;
+                    }
+
+                    // player wants to shoot but blocked by deep space or dirt cells
+                    if (isAttackBlocked(cell, false, false)) {
+                        break;
+                    }
+
+                    directionLine.add(cell);
                 }
-
-                if (euclideanDistance(currentWorm.position.x, currentWorm.position.y, coordinateX, coordinateY) > range) {
-                    break;
-                }
-
-                Cell cell = gameState.map[coordinateY][coordinateX];
-
-                // if not AIR cells, cannot be attacked (there will be no worms there)
-                if (cell.type != CellType.AIR) {
-                    break;
-                }
-
-                // player wants to shoot but blocked by deep space or dirt cells
-                if (type == AttackType.SHOOTING && isAttackBlocked(cell, false, false)) {
-                    break;
-                }
-
-                // player wants to banana bomb or snowball but blocked by deep space cells
-                if (type != AttackType.SHOOTING && isAttackBlocked(cell, true, false)) {
-                    break;
-                }
-
-                directionLine.add(cell);
+                directionLines.add(directionLine);
             }
-            directionLines.add(directionLine);
+
+            // convert from 2d list to list
+            return directionLines.stream()
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
         }
 
-        return directionLines;
+        // banana bomb or snowball, use surrounding cells
+        Vector<Cell> allAttackableCells = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, range);
+        allAttackableCells.removeIf(cell -> !isValidCoordinate(cell.x, cell.y) ||
+                cell.type != CellType.AIR ||
+                euclideanDistance(currentWorm.position.x, currentWorm.position.y, cell.x, cell.y) > range);
+        return allAttackableCells;
     }
 
     // is attacking will be blocked by dirt cells or deep space?
@@ -320,17 +348,26 @@ public class Bot {
         return false;
     }
 
-    private List<Cell> getSurroundingCells(int x, int y) {
-        ArrayList<Cell> cells = new ArrayList<>();
-        for (int i = x - 1; i <= x + 1; i++) {
-            for (int j = y - 1; j <= y + 1; j++) {
+    // get surrounding cells
+    // @param int x
+    // @param int y
+    // @param int spread
+    // @return List<Cell>
+    private Vector <Cell> getSurroundingCells(int x, int y, int spread) {
+        Vector<Cell> cells = new Vector<>();
+        for (int i = x - spread; i <= x + spread; i++) {
+            for (int j = y - spread; j <= y + spread; j++) {
                 // Don't include the current position
-                if (i != x && j != y && isValidCoordinate(i, j)) {
+                if(i==x && j==y)
+                {
+                    continue;
+                }
+                if (isValidCoordinate(i, j))
+                {
                     cells.add(gameState.map[j][i]);
                 }
             }
         }
-
         return cells;
     }
 
