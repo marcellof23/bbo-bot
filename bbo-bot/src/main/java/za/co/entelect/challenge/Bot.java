@@ -16,9 +16,9 @@ public class Bot {
     private GameState gameState;
     private Opponent opponent;
     private MyWorm currentWorm;
-    private final Position CENTRE1 = new Position(13,16);
-    private final Position CENTRE2 = new Position(16,16);
-    private final Position CENTRE3 = new Position(19,16);
+    private final Position CENTRE1 = new Position(16,16);
+    private final Position CENTRE2 = new Position(13,16);
+    private final Position CENTRE3 = new Position(18,16);
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -82,34 +82,58 @@ public class Bot {
             ));
         }
     }
+//    private void MoveToCenter() {
+//
+//    }
 
     // Main for bot
     // @param boolean DEBUG
     // @return Command
 
     public Command run(boolean DEBUG) {
+        Position CENTRE = new Position(0,0);
+        if(gameState.currentWormId==1) {
+            CENTRE = CENTRE2;
+        }
+        else if(gameState.currentWormId==2) {
+            CENTRE = CENTRE1;
+        }
+        else {
+            CENTRE = CENTRE3;
+        }
         if (DEBUG) {
             printCurrentWormInformation();
         }
         if(gameState.currentRound<=100)
         {
             System.out.println("==================asdfasdfasdfasdf===============");
+
+            Worm enemyWorm;
+            enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+            if (enemyWorm != null) {
+                Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                return new ShootCommand(direction);
+            }
             List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-            for(int i=0;i<surroundingBlocks.size();i++)
+            for(Cell surround : surroundingBlocks)
             {
-                Cell block = surroundingBlocks.get(i);
-                if(block.type == CellType.DIRT)
-                {
-                    return new DigCommand(block.x, block.y);
+                if(surround.type == CellType.DIRT) {
+                    return new DigCommand(surround.x, surround.y);
                 }
             }
-            for(int i=0;i<surroundingBlocks.size();i++)
+            Direction direction = resolveDirection( currentWorm.position, CENTRE);
+            if(direction == null)
+                return new DoNothingCommand();
+            int dX = currentWorm.position.x + direction.x;
+            int dY = currentWorm.position.y + direction.y;
+            Cell C = gameState.map[dY][dX];
+            if(C.type == CellType.DIRT)
             {
-                Cell blocks = surroundingBlocks.get(i);
-                if(blocks.type == CellType.AIR)
-                {
-                    return new MoveCommand(blocks.x, blocks.y);
-                }
+                return new DigCommand(C.x, C.y);
+            }
+            else
+            {
+                return new MoveCommand(C.x, C.y);
             }
         }
         String profession = currentWorm.profession;
@@ -127,22 +151,12 @@ public class Bot {
 
         // check shooting
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
-//        Position CENTRE = new Position(currentWorm.position.x, currentWorm.position.y);
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
         else {
-            Position CENTRE = new Position(0,0);
-            if(gameState.currentWormId==1) {
-                CENTRE = CENTRE3;
-            }
-            else if(gameState.currentWormId==2) {
-                CENTRE = CENTRE1;
-            }
-            else {
-                CENTRE = CENTRE2;
-            }
+
             Direction direction = resolveDirection( currentWorm.position, CENTRE);
             if(direction == null)
                 return new DoNothingCommand();
@@ -153,12 +167,10 @@ public class Bot {
                 Cell C = gameState.map[dY][dX];
                 if(C.type == CellType.DIRT)
                 {
-                    System.out.println("MASUK TANAH");
                     return new DigCommand(C.x, C.y);
                 }
                 else
                 {
-                    System.out.println("MASUK AIR");
                     return new MoveCommand(C.x, C.y);
                 }
             }
