@@ -112,12 +112,28 @@ public class Bot {
                 break;
             }
         }
-        if(threat!=null){
+        if(threat!=null && threat.roundsUntilUnfrozen==0){
             //initial value of position
             System.out.println("ANDA HARUS KABUR! KARENA ADA WORM YANG BISA MENYERANG ANDA SAAT INI");
             Position myPos = this.currentWorm.position;
+            Direction d = resolveDirection(myPos, threat.position);
             int x = myPos.x;
             int y = myPos.y;
+            int myWormCount = getMyLivingWormCount();
+            
+            if(myWormCount==1){
+                //kalo udah sendiri, menghindar sampe bego
+                System.out.println("UDAH SENDIRIAN BANG! SAATNYA KABUR SAMPE BEGO!");
+                List<Position> possibleEscapeDirection = d.getSafeZonePosition();
+                for(Position pos : possibleEscapeDirection){
+                    if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR){
+                        System.out.println("INI SAFE ZONENYA : ");
+                        System.out.println(pos.x + "," + pos.y);
+                        return new Position(x+pos.x, y+pos.y);
+                    }
+                }        
+            }
+
             Cell target = null;
             if(myPos.x<threat.position.x && x-1>=0){ //kalau kita lebih kiri dari musuh
                 target = gameState.map[y][x-1];
@@ -167,6 +183,8 @@ public class Bot {
                 }
             }
 
+           
+
             if(x!=myPos.x || y!=myPos.y){
                 if(Math.abs(threat.position.x-x)>=range || Math.abs(threat.position.y-y)>=range){
                     return new Position(x,y);
@@ -180,6 +198,15 @@ public class Bot {
         }else{
             return null;
         }
+    }
+
+    private int getMyLivingWormCount(){
+        int count = 0;
+        Worm[] myWorms = gameState.myPlayer.worms;
+        for(Worm w : myWorms){
+            count += w.health>0? 1 : 0;
+        }
+        return count;
     }
 
     // Print current worm information for debugging
@@ -217,12 +244,8 @@ public class Bot {
         }
 
         String profession = currentWorm.profession;
-
         Worm enemyWorm;
-
         Position myPos = currentWorm.position;
-
-        Position fleePosition = shouldFlee();
 
         if(gameState.map[myPos.y][myPos.x].type == CellType.LAVA){
             System.out.println("OUCH PANAS! HARUS GESER!");
@@ -232,13 +255,15 @@ public class Bot {
             }
         }
 
-        if(fleePosition!=null && currentWorm.health>0 && gameState.currentRound<100){
+        Position fleePosition = shouldFlee();
+
+        if(fleePosition!=null && currentWorm.health>0){
             try{
                 TimeUnit.SECONDS.sleep(3);
+                return new MoveCommand(fleePosition.x, fleePosition.y);
             }catch(Exception e){
                 e.printStackTrace();
             }
-            return new MoveCommand(fleePosition.x, fleePosition.y);
         }
 
         // TODO: change to shouldBananaBombs and shouldSnowball
