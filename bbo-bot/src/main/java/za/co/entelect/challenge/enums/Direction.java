@@ -1,5 +1,6 @@
 package za.co.entelect.challenge.enums;
-
+import java.util.*;
+import za.co.entelect.challenge.entities.Position;
 public enum Direction {
 
     N(0, -1),
@@ -17,5 +18,20 @@ public enum Direction {
     Direction(int x, int y) {
         this.x = x;
         this.y = y;
+    }
+
+    public List<Position> getSafeZonePosition(){
+        List<Position> res = new ArrayList<Position>();
+        if(this.x==0){
+            res.add(new Position(1,0));
+            res.add(new Position(-1,0));
+        }else if(this.y==0){
+            res.add(new Position(0,1));
+            res.add(new Position(0,-1));
+        }else{
+            res.add(new Position(-1*this.x,0));
+            res.add(new Position(0,-1*this.y));
+        }
+        return res;
     }
 }
