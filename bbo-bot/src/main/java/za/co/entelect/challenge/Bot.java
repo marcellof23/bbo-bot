@@ -135,9 +135,7 @@ public class Bot {
             int x = myPos.x;
             int y = myPos.y;
             int myWormCount = getMyLivingWormCount();
-            int myHealth = gameState.myPlayer.health;
-            int opponentHealth = getTotalEnemyHealth();
-            if(myWormCount==1 && isAttackableByBasic(myPos, threat.position) && (myHealth+8)<opponentHealth){
+            if(myWormCount==1 && isAttackableByBasic(myPos, threat.position)){
                 //kalo udah sendiri, menghindar sampe bego
                 System.out.println("UDAH SENDIRIAN BANG! SAATNYA KABUR SAMPE BEGO!");
                 List<Position> possibleEscapeDirection = d.getSafeZonePosition();
@@ -209,24 +207,6 @@ public class Bot {
             count += w.health>0? 1 : 0;
         }
         return count;
-    }
-
-    private int getEnemyLivingWormCount(){
-        int count = 0;
-        Worm[] myWorms = opponent.worms;
-        for(Worm w : myWorms){
-            count += w.health>0? 1 : 0;
-        }
-        return count;
-    }
-
-    private int getTotalEnemyHealth(){
-        int res = 0;
-        Worm[] myWorms = opponent.worms;
-        for(Worm w : myWorms){
-            res += w.health>0?w.health:0;
-        }
-        return res;
     }
 
     // Print current worm information for debugging
@@ -576,11 +556,6 @@ public class Bot {
 
         while(!playerPosition.equals(currentCell)) {
             currentCell = currentCell.minus(d);
-            for(Worm w : gameState.myPlayer.worms){
-                if(w.position.x == currentCell.x && w.position.y == currentCell.y){
-                    return true;
-                }
-            }
             if ((!dirtPassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DIRT) ||
                 (!deepSpacePassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DEEP_SPACE)
             ) {
