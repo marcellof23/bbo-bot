@@ -27,4 +27,5 @@ public class GameState {
 
     @SerializedName("map")
     public Cell[][] map;
+
 }
