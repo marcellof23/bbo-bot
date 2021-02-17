@@ -5,6 +5,7 @@ import za.co.entelect.challenge.entities.*;
 import za.co.entelect.challenge.enums.AttackType;
 import za.co.entelect.challenge.enums.CellType;
 import za.co.entelect.challenge.enums.Direction;
+import za.co.entelect.challenge.enums.PowerUpType;
 
 import java.sql.SQLOutput;
 import java.util.*;
@@ -19,9 +20,9 @@ public class Bot {
     private GameState gameState;
     private Opponent opponent;
     private MyWorm currentWorm;
-    private final Position CENTRE1 = new Position(16,16);
-    private final Position CENTRE2 = new Position(13,16);
-    private final Position CENTRE3 = new Position(18,16);
+    private final Position CENTRE1 = new Position(17,16);
+    private final Position CENTRE2 = new Position(19,16);
+    private final Position CENTRE3 = new Position(15,16);
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -245,17 +246,53 @@ public class Bot {
             ));
         }
     }
-    private Command first100Round(Position CENTRE) {
+    private Cell findPowerUp()
+    {
+        Cell PowerUpCell = gameState.map[currentWorm.position.y][currentWorm.position.x];
+        for(int i=0;i<gameState.mapSize;i++)
+        {
+            for(int j=0;j<gameState.mapSize;j++)
+            {
+                if(gameState.map[j][i].powerup == null)
+                {
+                    continue;
+                }
+                if(gameState.map[j][i].powerup.type == PowerUpType.HEALTH_PACK)
+                {
+                    PowerUpCell = gameState.map[j][i];
+                }
+            }
+        }
+        return PowerUpCell;
+    }
+    private Command first100Round(Position CENTRE, Cell PowerUpCell) {
         String profession = currentWorm.profession;
         Worm enemyWorm;
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+
         // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
-            enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
-            if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
+            if(currentWorm.health<=59)
+            {
+                enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
+                if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
+            }
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            Position snowballPosition = shouldSnowball();
-            if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
+            if(currentWorm.health<=59) {
+                Position snowballPosition = shouldSnowball();
+                if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
+            }
+        }
+        else {
+              Position opp_tech = opponent.worms[2].position;
+              return AttackFirst(opp_tech);
+//            if(PowerUpCell.x == currentWorm.position.x && PowerUpCell.y == currentWorm.position.y)
+//            {
+//                return AttackFirst(CENTRE);
+//            }
+//            System.out.println("TETTTTTTTTTTTTOTTTTTTTTTTTTTTT");
+//            Position P = new Position(PowerUpCell.x,PowerUpCell.y);
+//            MovetoPoint(P);
         }
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
@@ -273,7 +310,7 @@ public class Bot {
         Direction direction = resolveDirection( currentWorm.position, CENTRE);
         if(direction == null)
             // Masukkin algoritma flee & attack(ganti DoNothingCommand)
-            return new DoNothingCommand();
+            return AttackFirst(CENTRE);
 
         int dX = currentWorm.position.x + direction.x;
         int dY = currentWorm.position.y + direction.y;
@@ -286,9 +323,22 @@ public class Bot {
             return new MoveCommand(C.x, C.y);
         }
     }
-    private Command MovetoCenter(Position CENTRE)
+    private Command AttackFirst(Position Point)
     {
-        Direction direction = resolveDirection( currentWorm.position, CENTRE);
+        Worm enemyWorm;
+        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+        if (enemyWorm != null) {
+            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+            return new ShootCommand(direction);
+        }
+        else {
+            return MovetoPoint(Point);
+        }
+    }
+
+    private Command MovetoPoint(Position Point)
+    {
+        Direction direction = resolveDirection( currentWorm.position, Point);
         if(direction == null)
             return new DoNothingCommand();
         int dX = currentWorm.position.x + direction.x;
@@ -325,13 +375,18 @@ public class Bot {
         if (DEBUG) {
             printCurrentWormInformation();
         }
+
+            System.out.println("SALAH WOI");
+            Cell PowerUpCell = findPowerUp();
+
         if(gameState.currentRound<=100)
         {
-         return  first100Round(CENTRE);
+         return  first100Round(CENTRE,PowerUpCell);
         }
       
         String profession = currentWorm.profession;
         Worm enemyWorm;
+
         Position myPos = currentWorm.position;
 
         if(gameState.map[myPos.y][myPos.x].type == CellType.LAVA){
@@ -346,7 +401,7 @@ public class Bot {
 
         if(fleePosition!=null && currentWorm.health>0){
             try{
-                TimeUnit.SECONDS.sleep(3);
+
                 return new MoveCommand(fleePosition.x, fleePosition.y);
             }catch(Exception e){
                 e.printStackTrace();
@@ -363,14 +418,7 @@ public class Bot {
         }
 
         // check shooting
-        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
-        if (enemyWorm != null) {
-            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-            return new ShootCommand(direction);
-        }
-        else {
-            return MovetoCenter(CENTRE);
-        }
+        return AttackFirst(CENTRE);
     }
 
     // Get all attackable worms in range based on priority
@@ -578,12 +626,6 @@ public class Bot {
         {
             return null;
         }
-        try {
-            return Direction.valueOf(builder.toString());
-        }
-        catch (Exception ex ) {
-            ex.printStackTrace();
-            return null;
-        }
+        return Direction.valueOf(builder.toString());
     }
 }
