@@ -273,7 +273,7 @@ public class Bot {
         Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
         return new ShootCommand(direction);
     }
-    private Command findDirt60round()
+    private Command findDirt()
     {
         Worm enemyWorm;
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
@@ -288,10 +288,10 @@ public class Bot {
                 return new DigCommand(surround.x, surround.y);
             }
         }
-        int i =2;
+        int i = 2;
         while(i<gameState.mapSize){
-            Vector<Cell> findDirt = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, i);
-            for(Cell surround : findDirt)
+            Vector<Cell> findDirts = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, i);
+            for(Cell surround : findDirts)
             {
                 if(surround.type == CellType.DIRT) {
                     Position surroundPosition = new Position(surround.x,surround.y);
@@ -299,7 +299,6 @@ public class Bot {
                     Position P = new Position(currentWorm.position.x + direction.x , currentWorm.position.y + direction.y);
                     return MovetoPoint(P);
                 }
-
             }
             i++;
         }
@@ -408,7 +407,7 @@ public class Bot {
         }
         if(gameState.currentRound<=60)
         {
-            return findDirt60round();
+            return findDirt();
         }
         if(gameState.currentRound<=120)
         {
