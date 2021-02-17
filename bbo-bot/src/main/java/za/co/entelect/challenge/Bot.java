@@ -20,9 +20,9 @@ public class Bot {
     private GameState gameState;
     private Opponent opponent;
     private MyWorm currentWorm;
-    private final Position CENTRE1 = new Position(19,16);
-    private final Position CENTRE2 = new Position(13,16);
-    private final Position CENTRE3 = new Position(16,16);
+    private final Position CENTRE1 = new Position(17,16);
+    private final Position CENTRE2 = new Position(19,16);
+    private final Position CENTRE3 = new Position(15,16);
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -272,25 +272,27 @@ public class Bot {
 
         // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
-            if(currentWorm.health<=49)
+            if(currentWorm.health<=59)
             {
                 enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
                 if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
             }
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            if(currentWorm.health<=49) {
+            if(currentWorm.health<=59) {
                 Position snowballPosition = shouldSnowball();
                 if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
             }
         }
         else {
-            if(PowerUpCell.x == currentWorm.position.x && PowerUpCell.y == currentWorm.position.y)
-            {
-                return AttackFirst(CENTRE);
-            }
-            System.out.println("TETTTTTTTTTTTTOTTTTTTTTTTTTTTT");
-            Position P = new Position(PowerUpCell.x,PowerUpCell.y);
-            MovetoPoint(P);
+              Position opp_tech = opponent.worms[2].position;
+              return AttackFirst(opp_tech);
+//            if(PowerUpCell.x == currentWorm.position.x && PowerUpCell.y == currentWorm.position.y)
+//            {
+//                return AttackFirst(CENTRE);
+//            }
+//            System.out.println("TETTTTTTTTTTTTOTTTTTTTTTTTTTTT");
+//            Position P = new Position(PowerUpCell.x,PowerUpCell.y);
+//            MovetoPoint(P);
         }
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
@@ -333,6 +335,7 @@ public class Bot {
             return MovetoPoint(Point);
         }
     }
+
     private Command MovetoPoint(Position Point)
     {
         Direction direction = resolveDirection( currentWorm.position, Point);
