@@ -107,35 +107,15 @@ public class Bot {
         return null;
     }
 
-    private Position leaveLava(){
-        Position myPos = this.currentWorm.position;
-        List<Cell> nearby = getSurroundingCells(myPos.x, myPos.y, 1);
-        for(Cell c : nearby){
-            if(c.type==CellType.AIR){
-                return new Position(c.x, c.y);
-            }
-        }
-        for(Cell c : nearby){
-            if(c.type==CellType.DIRT){
-                return new Position(c.x, c.y);
-            }
-        }
-        return null;
-    }
-
     private Position shouldFlee(){
         PriorityQueue<Worm> attackableWorms;
         String profession = currentWorm.profession;
-        int range;
         if(profession.equals("Agent")){
             attackableWorms = getAllAttackableWormInRange(AttackType.BANANA_BOMB);
-            range = 5;
         }else if(profession.equals("Technologist")){
             attackableWorms = getAllAttackableWormInRange(AttackType.SNOWBALL);
-            range = 5;
         }else{
             attackableWorms = getAllAttackableWormInRange(AttackType.SHOOTING);
-            range = 4;
         }
         int currentEnemyWormId = opponent.currentWormId;
         Worm threat = null;
@@ -146,91 +126,64 @@ public class Bot {
             }
         }
         if(threat!=null && threat.roundsUntilUnfrozen==0){
-            //initial value of position
             System.out.println("ANDA HARUS KABUR! KARENA ADA WORM YANG BISA MENYERANG ANDA SAAT INI");
             Position myPos = this.currentWorm.position;
             Direction d = resolveDirection(myPos, threat.position);
+            System.out.println(String.format("INI POSISI KITA : %d,%d",myPos.x,myPos.y));
+            System.out.println(String.format("INI POSISI MUSUH : %d,%d",threat.position.x,threat.position.y));
+            System.out.println(String.format("INI DIRECTION KITA KE MUSUH : %d,%d",d.x,d.y));
             int x = myPos.x;
             int y = myPos.y;
             int myWormCount = getMyLivingWormCount();
             
-            if(myWormCount==1){
+            if(myWormCount==1 || isAttackableByBasic(myPos, threat.position)){
                 //kalo udah sendiri, menghindar sampe bego
                 System.out.println("UDAH SENDIRIAN BANG! SAATNYA KABUR SAMPE BEGO!");
                 List<Position> possibleEscapeDirection = d.getSafeZonePosition();
+                System.out.println(String.format("Ada %d direction yang aman",possibleEscapeDirection.size()));
+                List<Position> targetEscapePosition = new ArrayList<Position>();
+                //filter all possible escape direction
                 for(Position pos : possibleEscapeDirection){
-                    if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR){
-                        System.out.println("INI SAFE ZONENYA : ");
-                        System.out.println(pos.x + "," + pos.y);
-                        return new Position(x+pos.x, y+pos.y);
+                    if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR && !isOccupied(new Position(x+pos.x,y+pos.y))){
+                        targetEscapePosition.add(new Position(x+pos.x, y+pos.y));
                     }
-                }        
+                }
+                System.out.println(String.format("Ada %d target cell yang aman",targetEscapePosition.size()));
+                return getMinimumPathToCenter(targetEscapePosition);
             }
-
-            Cell target = null;
-            if(myPos.x<threat.position.x && x-1>=0){ //kalau kita lebih kiri dari musuh
-                target = gameState.map[y][x-1];
-                if(target.type == CellType.AIR){
-                    x--;
-                }
-            }else if(myPos.x>threat.position.x && x+1<33){ //kalau kita lebih kanan dari musuh
-                target = gameState.map[y][x+1];
-                if(target.type == CellType.AIR){
-                    x++;
-                }
-            }else{ //kalau musuh dan kita sekolom
-                if(x-1>=0){ //cek apakah bisa menjauh secara diagonal
-                    target = gameState.map[x-1][y];
-                    if(target.type == CellType.AIR){
-                        x--;
-                    }
-                }else if(x+1<33){ //cek apakah bisa menjauh secara diagonal
-                    target = gameState.map[x+1][y];
-                    if(target.type == CellType.AIR){
-                        x++;
-                    }
-                }
-            }
-
-             if(myPos.y<threat.position.y && y-1>=0){ //kalau kita lebih kiri dari musuh
-                target = gameState.map[y-1][x];
-                if(target.type == CellType.AIR){
-                    y--;
-                }
-            }else if(myPos.y>threat.position.y && y+1<33){ //kalau kita lebih kanan dari musuh
-                target = gameState.map[y+1][x];
-                if(target.type == CellType.AIR){
-                    y++;
-                }
-            }else{ //kalau musuh dan kita sebaris
-                if(y-1>=0){ //cek apakah bisa menjauh secara diagonal
-                    target = gameState.map[y-1][x];
-                    if(target.type == CellType.AIR){
-                        y--;
-                    }
-                }else if(y+1<33){ //cek apakah bisa menjauh secara diagonal
-                    target = gameState.map[y+1][x];
-                    if(target.type == CellType.AIR){
-                        y++;
-                    }
-                }
-            }
-
-           
-
-            if(x!=myPos.x || y!=myPos.y){
-                if(Math.abs(threat.position.x-x)>=range || Math.abs(threat.position.y-y)>=range){
-                    return new Position(x,y);
-                }
-                System.out.println("Dahlah serang aja daripada kabur, udah mepet");
-                return null;
-            }
-            System.out.println("Too bad! Ga bisa kabur kemana2, jadi serang aja");
-            //kalo gabisa kabur serang aja
-            return null;
-        }else{
-            return null;
         }
+        return null;
+    }
+
+    private Position getMinimumPathToCenter(List<Position> possibilities){
+        if(possibilities.size()>0){
+            int minDist = 1000;
+            Position posRes = possibilities.get(0);
+            for(Position p : possibilities) {
+                int dist = euclideanDistance(16, 16, p.x, p.y);
+                if(dist<minDist) {
+                    minDist=dist;
+                    posRes = p;
+                }
+            }
+            return posRes;
+        }
+        return null;
+    }
+
+    private boolean isOccupied(Position curPosition){
+        boolean res = false;
+        for(Worm w : opponent.worms){
+            if(curPosition.x==w.position.x && curPosition.y==w.position.y){
+                res = true;
+                break;
+            }
+        }
+        return res;
+    }
+
+    private boolean isAttackableByBasic(Position a, Position b){
+        return (a.x==b.x && Math.abs(a.y-b.y)<= 4) || (a.y == b.y && Math.abs(a.x-b.x)<=4) || (Math.abs(a.y-b.y)==Math.abs(a.x-b.x) && Math.abs(a.y-b.y)<=3);
     }
 
     private int getMyLivingWormCount(){
@@ -430,7 +383,6 @@ public class Bot {
       
         String profession = currentWorm.profession;
         Worm enemyWorm;
-
         Position myPos = currentWorm.position;
 
         if(gameState.map[myPos.y][myPos.x].type == CellType.LAVA){
