@@ -277,25 +277,6 @@ public class Bot {
         }
     }
 
-    private Cell findPowerUp() {
-        Cell PowerUpCell = gameState.map[currentWorm.position.y][currentWorm.position.x];
-        for(int i=0;i<gameState.mapSize;i++)
-        {
-            for(int j=0;j<gameState.mapSize;j++)
-            {
-                if(gameState.map[j][i].powerup == null)
-                {
-                    continue;
-                }
-                if(gameState.map[j][i].powerup.type == PowerUpType.HEALTH_PACK)
-                {
-                    PowerUpCell = gameState.map[j][i];
-                }
-            }
-        }
-        return PowerUpCell;
-    }
-
     private Command TriggerAttack()
     {
         String profession = currentWorm.profession;
@@ -308,15 +289,14 @@ public class Bot {
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
             Position snowballPosition = shouldSnowball();
             if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
-        }
-        else {
+        } else {
             Position opp_tech = opponent.worms[2].position;
             return AttackFirst(opp_tech);
         }
         Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
         return new ShootCommand(direction);
     }
-    
+
     private Command findDirt()
     {
         Worm enemyWorm;
@@ -341,7 +321,7 @@ public class Bot {
                     Position surroundPosition = new Position(surround.x,surround.y);
                     Direction direction = resolveDirection(currentWorm.position, surroundPosition);
                     Position P = new Position(currentWorm.position.x + direction.x , currentWorm.position.y + direction.y);
-                    return MovetoPoint(P);
+                    return MoveToPoint(P);
                 }
             }
             i++;
@@ -388,36 +368,22 @@ public class Bot {
         if (enemyWorm != null) {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
-        }
-        else {
-            return MovetoPoint(Point);
-        }
-    }
-
-    private Command HuntEnemy()
-    {
-        if(opponent.worms[1].health>0) {
-            Position opp_agent = opponent.worms[1].position;
-            return AttackFirst(opp_agent);
-        }
-        else if(opponent.worms[2].health>0)
-        {
-            Position opp_tech = opponent.worms[2].position;
-            return AttackFirst(opp_tech);
-        }
-        else
-        {
-            Position opp_com = opponent.worms[0].position;
-            return AttackFirst(opp_com);
+        } else {
+            return MoveToPoint(Point);
         }
     }
 
-    private Command MovetoPoint(Position Point)
-    {
-        Direction direction = resolveDirection( currentWorm.position, Point);
+    // Move to point
+    // @param Position point
+    // @return Command
+    private Command MoveToPoint(Position Point) {
+        Direction direction = resolveDirection(currentWorm.position, Point);
         if(direction == null)
         {
-            return HuntEnemy();
+            PriorityQueue<Worm> aliveEnemyWorms = getAllAliveEnemyWorm();
+            if (aliveEnemyWorms.size() > 0) {
+                return AttackFirst(aliveEnemyWorms.poll().position);
+            }
         }
         int dX = currentWorm.position.x + direction.x;
         int dY = currentWorm.position.y + direction.y;
@@ -495,6 +461,18 @@ public class Bot {
 
         // check shooting
         return AttackFirst(CENTRE);
+    }
+
+    // Get all alive enemy worm
+    // @return Worm PriorityQueue
+    private PriorityQueue<Worm> getAllAliveEnemyWorm() {
+        PriorityQueue<Worm> aliveWorms = new PriorityQueue<Worm>();
+        for(Worm enemy : opponent.worms) {
+            if (enemy.health > 0) {
+                aliveWorms.add(enemy);
+            }
+        }
+        return aliveWorms;
     }
 
     // Get all attackable worms in range based on priority
