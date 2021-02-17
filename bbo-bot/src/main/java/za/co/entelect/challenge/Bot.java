@@ -70,7 +70,7 @@ public class Bot {
                 int distance = euclideanDistance(cell.x, cell.y, currentWorm.position.x, currentWorm.position.y);
 
                 if ((enemyHits > maxEnemyHits && selfHits < minSelfHits) ||
-                    (enemyHits == maxEnemyHits && selfHits == minSelfHits && distance < minDistance)) {
+                    (enemyHits == maxEnemyHits && selfHits == minSelfHits && distance > currentWorm.snowballs.freezeRadius * 2 && distance < minDistance)) {
                     maxEnemyHits = enemyHits;
                     minSelfHits = selfHits;
                     minDistance = distance;
@@ -78,7 +78,7 @@ public class Bot {
                 }
             }
 
-            if ((minSelfHits == 0  || minSelfHits/getMyLivingWormCount() <= 0.5) && (maxEnemyHits/getEnemyLivingWormCount() >= 0.5 || currentWorm.health < 30)) {
+            if ((minSelfHits == 0  || minSelfHits/getMyLivingWormCount() <= 0.5)) {
                 return optimalPos;
             }
 
@@ -135,8 +135,9 @@ public class Bot {
             int x = myPos.x;
             int y = myPos.y;
             int myWormCount = getMyLivingWormCount();
-            
-            if(myWormCount==1 || isAttackableByBasic(myPos, threat.position)){
+            int myHealth = gameState.myPlayer.health;
+            int opponentHealth = getTotalEnemyHealth();
+            if(myWormCount==1 && isAttackableByBasic(myPos, threat.position) && (myHealth+8)<opponentHealth){
                 //kalo udah sendiri, menghindar sampe bego
                 System.out.println("UDAH SENDIRIAN BANG! SAATNYA KABUR SAMPE BEGO!");
                 List<Position> possibleEscapeDirection = d.getSafeZonePosition();
@@ -144,7 +145,13 @@ public class Bot {
                 List<Position> targetEscapePosition = new ArrayList<Position>();
                 //filter all possible escape direction
                 for(Position pos : possibleEscapeDirection){
-                    if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR && !isOccupied(new Position(x+pos.x,y+pos.y))){
+                    Position target = new Position(x+pos.x, y+pos.y);
+                    if(isOccupied(target)){
+                        System.out.println(String.format("THE TARGET CELL %d,%d IS OCCUPIED!",target.x,target.y));
+                    }else{
+                        System.out.println(String.format("THE TARGET CELL %d,%d IS NOT OCCUPIED!",target.x,target.y));
+                    }
+                    if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR && !isOccupied(target)){
                         targetEscapePosition.add(new Position(x+pos.x, y+pos.y));
                     }
                 }
@@ -179,6 +186,15 @@ public class Bot {
                 break;
             }
         }
+        if(!res){
+            for(Worm w : gameState.myPlayer.worms){
+                if(curPosition.x==w.position.x && curPosition.y==w.position.y){
+                    res = true;
+                    break;
+                }
+            }
+        }
+        
         return res;
     }
 
@@ -202,6 +218,15 @@ public class Bot {
             count += w.health>0? 1 : 0;
         }
         return count;
+    }
+
+    private int getTotalEnemyHealth(){
+        int res = 0;
+        Worm[] myWorms = opponent.worms;
+        for(Worm w : myWorms){
+            res += w.health>0?w.health:0;
+        }
+        return res;
     }
 
     // Print current worm information for debugging
@@ -372,20 +397,15 @@ public class Bot {
         if (DEBUG) {
             printCurrentWormInformation();
         }
-        if(gameState.currentRound<=60)
-        {
-            return findDirt();
-        }
-        if(gameState.currentRound<=120)
-        {
-         return  first120Round(CENTRE);
+        
+
+        if(gameState.currentRound<=120) {
+         return first120Round(CENTRE);
         }
       
         String profession = currentWorm.profession;
         Worm enemyWorm;
-
         Position fleePosition = shouldFlee();
-
         if(fleePosition!=null && currentWorm.health>0){
             try{
                 return new MoveCommand(fleePosition.x, fleePosition.y);
@@ -403,7 +423,8 @@ public class Bot {
         }
 
         // check shooting
-        return AttackFirst(CENTRE);
+        PriorityQueue<Worm> enemyWormTarget = getAllAliveEnemyWorm();
+        return AttackFirst(enemyWormTarget.poll().position);
     }
 
     // Get all alive enemy worm
@@ -555,6 +576,11 @@ public class Bot {
 
         while(!playerPosition.equals(currentCell)) {
             currentCell = currentCell.minus(d);
+            for(Worm w : gameState.myPlayer.worms){
+                if(w.position.x == currentCell.x && w.position.y == currentCell.y){
+                    return true;
+                }
+            }
             if ((!dirtPassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DIRT) ||
                 (!deepSpacePassed && gameState.map[currentCell.y][currentCell.x].type == CellType.DEEP_SPACE)
             ) {

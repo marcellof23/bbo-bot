@@ -24,21 +24,12 @@ public enum Direction {
         List<Position> res = new ArrayList<Position>();
         for(int x =-1; x<=1; x++){
             for(int y=-1; y<=1; y++){
-                if((x!=this.x && y!=this.y)||(x!=-1*this.x && y!=-1*this.y)){
-                    res.add(new Position(x,y));
+                if((x==0 && y==0) || (x==this.x && y==this.y) || (x==-1*this.x && y==-1*this.y)){
+                    continue;
                 }
+                res.add(new Position(x,y));
             }
         }
-        // res.add(new Position(0,-1));
-        // res.add(new Position(1,-1));
-        // res.add(new Position(1,0));
-        // res.add(new Position(1,1));
-        // res.add(new Position(0,1));
-        // res.add(new Position(-1,1));
-        // res.add(new Position(-1,0));
-        // res.add(new Position(-1,-1));
-        // res.remove(new Position(this.x, this.y));
-        // res.remove(new Position(-1*this.x, -1*this.y));
         return res;
     }
 }

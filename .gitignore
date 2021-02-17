@@ -6,3 +6,7 @@ start-visualiser.bat
 UnityPlayer.dll
 *.jar
 *.exe
+Battle*/
+Prestasi/
+*.zip
+/Mabok
