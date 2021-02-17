@@ -246,25 +246,7 @@ public class Bot {
             ));
         }
     }
-    private Cell findPowerUp()
-    {
-        Cell PowerUpCell = gameState.map[currentWorm.position.y][currentWorm.position.x];
-        for(int i=0;i<gameState.mapSize;i++)
-        {
-            for(int j=0;j<gameState.mapSize;j++)
-            {
-                if(gameState.map[j][i].powerup == null)
-                {
-                    continue;
-                }
-                if(gameState.map[j][i].powerup.type == PowerUpType.HEALTH_PACK)
-                {
-                    PowerUpCell = gameState.map[j][i];
-                }
-            }
-        }
-        return PowerUpCell;
-    }
+
     private Command TriggerAttack()
     {
         String profession = currentWorm.profession;
@@ -366,31 +348,29 @@ public class Bot {
             return MovetoPoint(Point);
         }
     }
-
+    private Command HuntEnemy()
+    {
+        if(opponent.worms[1].health>0) {
+            Position opp_agent = opponent.worms[1].position;
+            return AttackFirst(opp_agent);
+        }
+        else if(opponent.worms[2].health>0)
+        {
+            Position opp_tech = opponent.worms[2].position;
+            return AttackFirst(opp_tech);
+        }
+        else
+        {
+            Position opp_com = opponent.worms[0].position;
+            return AttackFirst(opp_com);
+        }
+    }
     private Command MovetoPoint(Position Point)
     {
         Direction direction = resolveDirection( currentWorm.position, Point);
         if(direction == null)
         {
-            if(opponent.worms[1].health>0) {
-                Position opp_agent = opponent.worms[1].position;
-                return AttackFirst(opp_agent);
-            }
-            else if(opponent.worms[2].health>0)
-            {
-                Position opp_tech = opponent.worms[2].position;
-                return AttackFirst(opp_tech);
-            }
-            else if(opponent.worms[0].health>0)
-            {
-                Position opp_com = opponent.worms[0].position;
-                return AttackFirst(opp_com);
-            }
-            else
-            {
-                Position PP = new Position(16,16);
-                AttackFirst(PP);
-            }
+            return HuntEnemy();
         }
         int dX = currentWorm.position.x + direction.x;
         int dY = currentWorm.position.y + direction.y;
