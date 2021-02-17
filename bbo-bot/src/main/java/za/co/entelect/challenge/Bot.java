@@ -296,38 +296,65 @@ public class Bot {
         return PowerUpCell;
     }
 
-    private Command first100Round(Position CENTRE, Cell PowerUpCell) {
+    private Command TriggerAttack()
+    {
         String profession = currentWorm.profession;
         Worm enemyWorm;
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
 
-        // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
-            if(currentWorm.health<=59)
-            {
-                enemyWorm = getAttackableWormInRange(AttackType.BANANA_BOMB);
-                if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
-            }
+            enemyWorm = shouldBanana();
+            if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
         } else if (profession.equals("Technologist") && currentWorm.snowballs.count > 0) {
-            if(currentWorm.health<=59) {
-                Position snowballPosition = shouldSnowball();
-                if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
-            }
+            Position snowballPosition = shouldSnowball();
+            if (snowballPosition != null) return new SnowballCommand(snowballPosition.x, snowballPosition.y);
         }
         else {
-              Position opp_tech = opponent.worms[2].position;
-              return AttackFirst(opp_tech);
-//            if(PowerUpCell.x == currentWorm.position.x && PowerUpCell.y == currentWorm.position.y)
-//            {
-//                return AttackFirst(CENTRE);
-//            }
-//            System.out.println("TETTTTTTTTTTTTOTTTTTTTTTTTTTTT");
-//            Position P = new Position(PowerUpCell.x,PowerUpCell.y);
-//            MovetoPoint(P);
+            Position opp_tech = opponent.worms[2].position;
+            return AttackFirst(opp_tech);
         }
+        Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+        return new ShootCommand(direction);
+    }
+
+    private Command findDirt60round()
+    {
+        Worm enemyWorm;
+        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
+        if(enemyWorm != null)
+        {
+            return TriggerAttack();
+        }
+        Vector<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, 1);
+        for(Cell surround : surroundingBlocks)
+        {
+            if(surround.type == CellType.DIRT) {
+                return new DigCommand(surround.x, surround.y);
+            }
+        }
+        int i =2;
+        while(i<gameState.mapSize){
+            Vector<Cell> findDirt = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, i);
+            for(Cell surround : findDirt)
+            {
+                if(surround.type == CellType.DIRT) {
+                    Position surroundPosition = new Position(surround.x,surround.y);
+                    Direction direction = resolveDirection(currentWorm.position, surroundPosition);
+                    Position P = new Position(currentWorm.position.x + direction.x , currentWorm.position.y + direction.y);
+                    return MovetoPoint(P);
+                }
+
+            }
+            i++;
+        }
+        return new DoNothingCommand();
+    }
+
+    private Command first120Round(Position CENTRE) {
+        Worm enemyWorm;
+        enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
         if (enemyWorm != null) {
-            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-            return new ShootCommand(direction);
+            return TriggerAttack();
         }
 
         Vector<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y, 1);
@@ -354,6 +381,7 @@ public class Bot {
             return new MoveCommand(C.x, C.y);
         }
     }
+
     private Command AttackFirst(Position Point)
     {
         Worm enemyWorm;
@@ -367,11 +395,31 @@ public class Bot {
         }
     }
 
+    private Command HuntEnemy()
+    {
+        if(opponent.worms[1].health>0) {
+            Position opp_agent = opponent.worms[1].position;
+            return AttackFirst(opp_agent);
+        }
+        else if(opponent.worms[2].health>0)
+        {
+            Position opp_tech = opponent.worms[2].position;
+            return AttackFirst(opp_tech);
+        }
+        else
+        {
+            Position opp_com = opponent.worms[0].position;
+            return AttackFirst(opp_com);
+        }
+    }
+
     private Command MovetoPoint(Position Point)
     {
         Direction direction = resolveDirection( currentWorm.position, Point);
         if(direction == null)
-            return new DoNothingCommand();
+        {
+            return HuntEnemy();
+        }
         int dX = currentWorm.position.x + direction.x;
         int dY = currentWorm.position.y + direction.y;
         if(isValidCoordinate(dX,dY))
@@ -388,10 +436,10 @@ public class Bot {
         }
         return new DoNothingCommand();
     }
+
     // Main for bot
     // @param boolean DEBUG
     // @return Command
-
     public Command run(boolean DEBUG) {
         Position CENTRE = new Position(0,0);
         if(gameState.currentWormId==1) {
@@ -406,13 +454,13 @@ public class Bot {
         if (DEBUG) {
             printCurrentWormInformation();
         }
-
-            System.out.println("SALAH WOI");
-            Cell PowerUpCell = findPowerUp();
-
-        if(gameState.currentRound<=100)
+        if(gameState.currentRound<=60)
         {
-         return  first100Round(CENTRE,PowerUpCell);
+            return findDirt60round();
+        }
+        if(gameState.currentRound<=120)
+        {
+         return  first120Round(CENTRE);
         }
       
         String profession = currentWorm.profession;
@@ -432,7 +480,6 @@ public class Bot {
 
         if(fleePosition!=null && currentWorm.health>0){
             try{
-
                 return new MoveCommand(fleePosition.x, fleePosition.y);
             }catch(Exception e){
                 e.printStackTrace();
