@@ -398,7 +398,7 @@ public class Bot {
         // search for all attackable worms
         for (Worm enemyWorm : opponent.worms) {
             String enemyPosition = String.format("%d_%d", enemyWorm.position.x, enemyWorm.position.y);
-            if (cells.contains(enemyPosition)) {
+            if (cells.contains(enemyPosition) && enemyWorm.health > 0) {
                 // enemy is attackable, add to priority queue, priority is sorted by profession in compareTo functions
                 attackableWorms.add(enemyWorm);
             }
