@@ -22,16 +22,23 @@ public enum Direction {
 
     public List<Position> getSafeZonePosition(){
         List<Position> res = new ArrayList<Position>();
-        if(this.x==0){
-            res.add(new Position(1,0));
-            res.add(new Position(-1,0));
-        }else if(this.y==0){
-            res.add(new Position(0,1));
-            res.add(new Position(0,-1));
-        }else{
-            res.add(new Position(-1*this.x,0));
-            res.add(new Position(0,-1*this.y));
+        for(int x =-1; x<=1; x++){
+            for(int y=-1; y<=1; y++){
+                if((x!=this.x && y!=this.y)||(x!=-1*this.x && y!=-1*this.y)){
+                    res.add(new Position(x,y));
+                }
+            }
         }
+        // res.add(new Position(0,-1));
+        // res.add(new Position(1,-1));
+        // res.add(new Position(1,0));
+        // res.add(new Position(1,1));
+        // res.add(new Position(0,1));
+        // res.add(new Position(-1,1));
+        // res.add(new Position(-1,0));
+        // res.add(new Position(-1,-1));
+        // res.remove(new Position(this.x, this.y));
+        // res.remove(new Position(-1*this.x, -1*this.y));
         return res;
     }
 }
