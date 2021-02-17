@@ -20,9 +20,11 @@ public class Bot {
     private GameState gameState;
     private Opponent opponent;
     private MyWorm currentWorm;
+
     private final Position CENTRE1 = new Position(17,16);
     private final Position CENTRE2 = new Position(19,16);
     private final Position CENTRE3 = new Position(15,16);
+
     public Bot(Random random, GameState gameState) {
         this.random = random;
         this.gameState = gameState;
@@ -44,25 +46,44 @@ public class Bot {
             List<Cell> attackableCells = getAllAttackableCellsInRange(currentWorm.snowballs.range, AttackType.SNOWBALL);
 
             Position optimalPos = null;
+            int minDistance = 99;
             int maxEnemyHits = 0;
+            int minSelfHits = 3;
 
             for(Cell cell : attackableCells) {
-                int m = 0;
-                for(Worm enemy : opponent.worms) {
-                    if(enemy.roundsUntilUnfrozen == 0 &&
-                       euclideanDistance(cell.x, cell.y, enemy.position.x, enemy.position.y) <= currentWorm.snowballs.freezeRadius) {
-                        m += 1;
+                int selfHits = 0;
+                for(Worm myWorm : gameState.myPlayer.worms) {
+                    if (myWorm != currentWorm &&
+                        euclideanDistance(cell.x, cell.y, myWorm.position.x, myWorm.position.y) <= currentWorm.snowballs.freezeRadius) {
+                        selfHits += 1;
                     }
                 }
 
-                if (m > maxEnemyHits) {
-                    maxEnemyHits = m;
+                int enemyHits = 0;
+                for(Worm enemy : opponent.worms) {
+                    if(enemy.roundsUntilUnfrozen == 0 &&
+                       euclideanDistance(cell.x, cell.y, enemy.position.x, enemy.position.y) <= currentWorm.snowballs.freezeRadius) {
+                        enemyHits += 1;
+                    }
+                }
+
+                int distance = euclideanDistance(cell.x, cell.y, currentWorm.position.x, currentWorm.position.y);
+
+                if ((enemyHits > maxEnemyHits && selfHits < minSelfHits) ||
+                    (enemyHits == maxEnemyHits && selfHits == minSelfHits && distance < minDistance)) {
+                    maxEnemyHits = enemyHits;
+                    minSelfHits = selfHits;
+                    minDistance = distance;
                     optimalPos = new Position(cell.x, cell.y);
                 }
             }
 
-            // return optimal position for the most enemy hits, null if not found
-            return optimalPos;
+            if ((minSelfHits == 0  || minSelfHits/getMyLivingWormCount() <= 0.5) && (maxEnemyHits/getEnemyLivingWormCount() >= 0.5 || currentWorm.health < 30)) {
+                return optimalPos;
+            }
+
+            // save for later, not worth the sacrifice
+            return null;
         }
 
         // not technologist or no snowballs remaining
@@ -221,6 +242,15 @@ public class Bot {
         return count;
     }
 
+    private int getEnemyLivingWormCount(){
+        int count = 0;
+        Worm[] myWorms = opponent.worms;
+        for(Worm w : myWorms){
+            count += w.health>0? 1 : 0;
+        }
+        return count;
+    }
+
     // Print current worm information for debugging
     private void printCurrentWormInformation() {
         System.out.println(String.format("Current worm id: %d", this.currentWorm.id));
@@ -246,8 +276,8 @@ public class Bot {
             ));
         }
     }
-    private Cell findPowerUp()
-    {
+
+    private Cell findPowerUp() {
         Cell PowerUpCell = gameState.map[currentWorm.position.y][currentWorm.position.x];
         for(int i=0;i<gameState.mapSize;i++)
         {
@@ -265,6 +295,7 @@ public class Bot {
         }
         return PowerUpCell;
     }
+
     private Command first100Round(Position CENTRE, Cell PowerUpCell) {
         String profession = currentWorm.profession;
         Worm enemyWorm;
@@ -408,7 +439,6 @@ public class Bot {
             }
         }
 
-        // TODO: change to shouldBananaBombs and shouldSnowball
         if (profession.equals("Agent") && currentWorm.bananaBombs.count > 0) {
             enemyWorm = shouldBanana();
             if (enemyWorm != null) return new BananaBombCommand(enemyWorm.position.x, enemyWorm.position.y);
