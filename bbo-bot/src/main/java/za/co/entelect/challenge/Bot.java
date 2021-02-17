@@ -383,15 +383,6 @@ public class Bot {
       
         String profession = currentWorm.profession;
         Worm enemyWorm;
-        Position myPos = currentWorm.position;
-
-        if(gameState.map[myPos.y][myPos.x].type == CellType.LAVA){
-            System.out.println("OUCH PANAS! HARUS GESER!");
-            Position kabur = leaveLava();
-            if(kabur!=null){
-                return new MoveCommand(kabur.x, kabur.y);
-            }
-        }
 
         Position fleePosition = shouldFlee();
 
