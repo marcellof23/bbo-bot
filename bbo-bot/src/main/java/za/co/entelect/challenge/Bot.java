@@ -126,34 +126,22 @@ public class Bot {
             }
         }
         if(threat!=null && threat.roundsUntilUnfrozen==0){
-            System.out.println("ANDA HARUS KABUR! KARENA ADA WORM YANG BISA MENYERANG ANDA SAAT INI");
             Position myPos = this.currentWorm.position;
             Direction d = resolveDirection(myPos, threat.position);
-            System.out.println(String.format("INI POSISI KITA : %d,%d",myPos.x,myPos.y));
-            System.out.println(String.format("INI POSISI MUSUH : %d,%d",threat.position.x,threat.position.y));
-            System.out.println(String.format("INI DIRECTION KITA KE MUSUH : %d,%d",d.x,d.y));
             int x = myPos.x;
             int y = myPos.y;
             int myWormCount = getMyLivingWormCount();
             if(myWormCount==1 && isAttackableByBasic(myPos, threat.position)){
                 //kalo udah sendiri, menghindar sampe bego
-                System.out.println("UDAH SENDIRIAN BANG! SAATNYA KABUR SAMPE BEGO!");
                 List<Position> possibleEscapeDirection = d.getSafeZonePosition();
-                System.out.println(String.format("Ada %d direction yang aman",possibleEscapeDirection.size()));
                 List<Position> targetEscapePosition = new ArrayList<Position>();
                 //filter all possible escape direction
                 for(Position pos : possibleEscapeDirection){
                     Position target = new Position(x+pos.x, y+pos.y);
-                    if(isOccupied(target)){
-                        System.out.println(String.format("THE TARGET CELL %d,%d IS OCCUPIED!",target.x,target.y));
-                    }else{
-                        System.out.println(String.format("THE TARGET CELL %d,%d IS NOT OCCUPIED!",target.x,target.y));
-                    }
                     if(gameState.map[y+pos.y][x+pos.x].type==CellType.AIR && !isOccupied(target)){
                         targetEscapePosition.add(new Position(x+pos.x, y+pos.y));
                     }
                 }
-                System.out.println(String.format("Ada %d target cell yang aman",targetEscapePosition.size()));
                 return getMinimumPathToCenter(targetEscapePosition);
             }
         }
@@ -291,13 +279,10 @@ public class Bot {
     {
         Worm enemyWorm;
         enemyWorm = getAttackableWormInRange(AttackType.SHOOTING);
-        System.out.println("INI FUNGSI ATTACK FIRST");
         if (enemyWorm != null) {
-            System.out.println("ENEMYNYA GA NULLLLLLLLLLL");
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         } else {
-            System.out.println("ENEMYNYA NULLLLLLLLLLL");
             return MoveToPoint(Point);
         }
     }
@@ -454,9 +439,7 @@ public class Bot {
     // @return Worm
     private Worm getAttackableWormInRange(PriorityQueue<Worm> attackableWorms) {
         // no worm can be attacked!
-        System.out.println("PANGGIL getAttackableWormInRange ");
         if(attackableWorms.size() == 0) {
-            System.out.println("SIZENYA ENOL");
             return null;
         }
 
@@ -469,11 +452,8 @@ public class Bot {
 
         // no worm can be attacked!
         if (result.health <= 0) {
-            System.out.println("SEMUANYA ENOL");
             return null;
         }
-        System.out.println("ADA worms YANG BISA DISERANG");
-        System.out.println(""+result.profession);
         return result;
     }
 
