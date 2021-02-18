@@ -29,20 +29,20 @@ public class Worm implements Comparable<Worm>{
     public int compareTo(Worm w) {
         if (w.profession.equals("Technologist") && !this.profession.equals("Technologist")) {
             // higher priority
-            return -1;
+            return 1;
         } else if (w.profession.equals("Agent") && this.profession.equals("Commando")) {
             // higher priority
-            return -1;
+            return 1;
         } else if (w.profession.equals("Agent") && this.profession.equals("Technologist")) {
             // lower priority
-            return 1;
+            return -1;
         } else if (w.profession.equals("Commando") && !this.profession.equals("Commando")) {
             // lower priority
-            return 1;
+            return -1;
         }
 
         // same profession, default
-        return 1;
+        return -1;
     }
 
 }

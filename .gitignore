@@ -9,5 +9,9 @@ UnityPlayer.dll
 Battle*/
 Prestasi/
 *.zip
+<<<<<<< HEAD
 /Mabok
 *.json
+=======
+/Mabok
+>>>>>>> 4f659e8614e50943e1ac4bc27a981dc997c53eaa
